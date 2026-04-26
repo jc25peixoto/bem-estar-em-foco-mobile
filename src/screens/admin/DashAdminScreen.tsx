@@ -1,17 +1,15 @@
-import React, { useCallback, useRef, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Typography } from '../../components/ui/Typography';
-import { tokens } from '../../theme/tokens';
+import React, { useCallback, useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LegendList } from '@legendapp/list';
-import BottomSheet from '@gorhom/bottom-sheet';
-import { FilterBottomSheet } from '../../components/admin/FilterBottomSheet';
+import { Typography } from '../../components/ui/Typography';
 import { Card } from '../../components/ui/Card';
+import { tokens } from '../../theme/tokens';
+import { FilterModal } from '../../components/admin/FilterModal';
 import { Button } from '../../components/ui/Button';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../stores/useAuthStore';
 
-// Tipagem básica para a lista
 type AlunaItem = {
   id: string;
   name: string;
@@ -19,7 +17,6 @@ type AlunaItem = {
   status: 'ativo' | 'inativo';
 };
 
-// Gerando dados falsos grandes para testar a performance do LegendList
 const mockAlunas: AlunaItem[] = Array.from({ length: 500 }).map((_, i) => ({
   id: `aluna-${i}`,
   name: `Aluna ${i + 1}`,
@@ -29,21 +26,12 @@ const mockAlunas: AlunaItem[] = Array.from({ length: 500 }).map((_, i) => ({
 
 export function DashAdminScreen() {
   const [data] = useState(mockAlunas);
-  const bottomSheetRef = useRef<BottomSheet>(null);
+  const [filterVisible, setFilterVisible] = useState(false);
   const navigation = useNavigation<any>();
   const { startImpersonation } = useAuthStore();
 
-  const handleOpenFilter = () => {
-    bottomSheetRef.current?.expand();
-  };
-
-  const handleCloseFilter = () => {
-    bottomSheetRef.current?.close();
-  };
-
   const handleApplyFilters = (filters: Record<string, string>) => {
     console.log('Aplicando filtros:', filters);
-    // Aqui viria a lógica de filtro
   };
 
   const renderItem = useCallback(({ item }: { item: AlunaItem }) => {
@@ -59,11 +47,11 @@ export function DashAdminScreen() {
             </View>
           </View>
           <Typography variant="caption" color="mutedForeground">{item.email}</Typography>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
-            title="Acessar como Aluna" 
+
+          <Button
+            variant="outline"
+            size="sm"
+            title="Acessar como Aluna"
             style={styles.impersonateBtn}
             onPress={() => startImpersonation({ id: item.id, name: item.name, email: item.email, onboardingComplete: true })}
           />
@@ -77,7 +65,7 @@ export function DashAdminScreen() {
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <Typography variant="h2">Painel Admin</Typography>
-          <Button variant="secondary" size="sm" title="Filtros" onPress={handleOpenFilter} />
+          <Button variant="secondary" size="sm" title="Filtros" onPress={() => setFilterVisible(true)} />
         </View>
         <Typography variant="body" color="mutedForeground">
           Total de {data.length} alunas cadastradas.
@@ -92,10 +80,10 @@ export function DashAdminScreen() {
         contentContainerStyle={styles.listContent}
       />
 
-      <FilterBottomSheet 
-        ref={bottomSheetRef} 
-        onClose={handleCloseFilter} 
-        onApplyFilters={handleApplyFilters} 
+      <FilterModal
+        visible={filterVisible}
+        onClose={() => setFilterVisible(false)}
+        onApplyFilters={handleApplyFilters}
       />
     </SafeAreaView>
   );

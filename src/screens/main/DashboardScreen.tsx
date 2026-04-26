@@ -1,11 +1,13 @@
 import React from 'react';
-import { ScrollView, View, StyleSheet } from 'react-native';
+import { ScrollView, View, StyleSheet, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LineChart } from 'react-native-gifted-charts';
 import { Typography } from '../../components/ui/Typography';
 import { Card } from '../../components/ui/Card';
 import { tokens } from '../../theme/tokens';
 import { useEffectiveUser } from '../../stores/useAuthStore';
+import { SimpleLineChart } from '../../components/ui/SimpleLineChart';
+
+const { width } = Dimensions.get('window');
 
 export function DashboardScreen() {
   const user = useEffectiveUser();
@@ -30,21 +32,12 @@ export function DashboardScreen() {
 
         <Card style={styles.card}>
           <Typography variant="h4" style={styles.cardTitle}>Evolução de Peso</Typography>
-          <View style={styles.chartContainer}>
-            <LineChart
-              data={mockChartData}
-              color="#d63f52" // aproximação do primary
-              thickness={3}
-              dataPointsColor="#d63f52"
-              hideRules
-              yAxisColor="transparent"
-              xAxisColor="transparent"
-              yAxisTextStyle={{ color: '#888' }}
-              xAxisLabelTextStyle={{ color: '#888', fontSize: 10 }}
-              spacing={50}
-              initialSpacing={10}
-            />
-          </View>
+          <SimpleLineChart
+            data={mockChartData}
+            color={tokens.colors.primary}
+            width={width - tokens.spacing.lg * 4}
+            height={160}
+          />
         </Card>
 
         <View style={styles.statsGrid}>
@@ -57,7 +50,6 @@ export function DashboardScreen() {
             <Typography variant="h2" color="primary">42</Typography>
           </Card>
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -80,10 +72,6 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     marginBottom: tokens.spacing.md,
-  },
-  chartContainer: {
-    alignItems: 'center',
-    marginLeft: -20, // Ajuste fino pro chart
   },
   statsGrid: {
     flexDirection: 'row',

@@ -1,15 +1,14 @@
-import React from 'react';
-import { Pressable, PressableProps, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import React, { useRef } from 'react';
+import {
+  Animated,
+  Pressable,
+  PressableProps,
+  StyleSheet,
+  ViewStyle,
+  TextStyle,
+} from 'react-native';
 import { tokens } from '../../theme/tokens';
 import { Typography } from './Typography';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface ButtonProps extends PressableProps {
   variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost';
@@ -27,44 +26,48 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-      opacity: disabled ? 0.5 : opacity.value,
-    };
-  });
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = (e: any) => {
-    scale.value = withSpring(0.96, { stiffness: 400, damping: 20 });
-    opacity.value = withTiming(0.8, { duration: 100 });
+    Animated.parallel([
+      Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true, speed: 50 }),
+      Animated.timing(opacityAnim, { toValue: 0.8, duration: 100, useNativeDriver: true }),
+    ]).start();
     props.onPressIn?.(e);
   };
 
   const handlePressOut = (e: any) => {
-    scale.value = withSpring(1, { stiffness: 400, damping: 20 });
-    opacity.value = withTiming(1, { duration: 150 });
+    Animated.parallel([
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 50 }),
+      Animated.timing(opacityAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+    ]).start();
     props.onPressOut?.(e);
   };
 
   return (
-    <AnimatedPressable
-      style={[styles.base, variantStyles[variant], sizeStyles[size], style as ViewStyle, animatedStyle]}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      disabled={disabled}
-      {...props}
+    <Animated.View
+      style={{
+        transform: [{ scale: scaleAnim }],
+        opacity: disabled ? 0.5 : opacityAnim,
+      }}
     >
-      {title ? (
-        <Typography variant="button" style={[textStyles[variant]]}>
-          {title}
-        </Typography>
-      ) : (
-        children
-      )}
-    </AnimatedPressable>
+      <Pressable
+        style={[styles.base, variantStyles[variant], sizeStyles[size], style as ViewStyle]}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled}
+        {...props}
+      >
+        {title ? (
+          <Typography variant="button" style={[textStyles[variant]]}>
+            {title}
+          </Typography>
+        ) : (
+          children
+        )}
+      </Pressable>
+    </Animated.View>
   );
 }
 
