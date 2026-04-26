@@ -8,9 +8,13 @@ interface AuthState {
   authReady: boolean;
   session: any | null;
   
+  isImpersonating: boolean;
+  effectiveUser: UserData | null;
+  
   // Actions
   setSession: (session: any | null) => void;
   setCurrentUser: (user: UserData | null) => void;
+  setIsAdmin: (isAdmin: boolean) => void;
   setAuthReady: (ready: boolean) => void;
   startImpersonation: (user: UserData) => void;
   stopImpersonation: () => void;
@@ -22,19 +26,30 @@ export const useAuthStore = create<AuthState>((set) => ({
   viewingAs: null,
   authReady: false,
   session: null,
+  isImpersonating: false,
+  effectiveUser: null,
 
   setSession: (session) => set({ session }),
-  setCurrentUser: (user) => set({ 
+  setCurrentUser: (user) => set((state) => ({ 
     currentUser: user, 
-    isAdmin: user?.isAdmin || user?.tipoAcesso === 2 
-  }),
+    isAdmin: user?.isAdmin || user?.tipoAcesso === 2 || state.isAdmin,
+    effectiveUser: state.viewingAs || user
+  })),
+  setIsAdmin: (isAdmin) => set({ isAdmin }),
   setAuthReady: (ready) => set({ authReady: ready }),
   
-  startImpersonation: (user) => set({ viewingAs: user }),
-  stopImpersonation: () => set({ viewingAs: null }),
+  startImpersonation: (user) => set((state) => ({ 
+    viewingAs: user,
+    isImpersonating: true,
+    effectiveUser: user
+  })),
+  stopImpersonation: () => set((state) => ({ 
+    viewingAs: null,
+    isImpersonating: false,
+    effectiveUser: state.currentUser
+  })),
 }));
 
 export const useEffectiveUser = () => {
-  const { currentUser, viewingAs } = useAuthStore();
-  return viewingAs || currentUser;
+  return useAuthStore((state) => state.effectiveUser);
 };
