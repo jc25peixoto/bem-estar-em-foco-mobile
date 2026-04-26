@@ -3,27 +3,30 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthStack } from './AuthStack';
 import { AppTabs } from './AppTabs';
+import { AdminStack } from './AdminStack';
 import { useAuthStore } from '../stores/useAuthStore';
 import { supabase } from '../lib/supabase';
 import { View, ActivityIndicator } from 'react-native';
 import { tokens } from '../theme/tokens';
+import { AdminPreviewBanner } from '../components/admin/AdminPreviewBanner';
 
 const Stack = createNativeStackNavigator();
 
 export function RootNavigator() {
-  const { authReady, currentUser, setSession, setAuthReady, setCurrentUser } = useAuthStore();
+  const { authReady, currentUser, isAdmin, isImpersonating, setSession, setAuthReady, setCurrentUser, setIsAdmin } = useAuthStore();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      // Aqui idealmente faríamos o fetch do profile para preencher o currentUser
-      // Por enquanto, simulamos estar logado se houver session
       if (session?.user) {
+        // Mock checking for admin
+        const adminRole = session.user.email?.includes('admin') || false;
+        setIsAdmin(adminRole);
         setCurrentUser({
           id: session.user.id,
           name: session.user.user_metadata?.full_name || 'Usuária',
           email: session.user.email || '',
-          onboardingComplete: true, // mock
+          onboardingComplete: true,
         });
       }
       setAuthReady(true);
@@ -32,14 +35,17 @@ export function RootNavigator() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
+        const adminRole = session.user.email?.includes('admin') || false;
+        setIsAdmin(adminRole);
         setCurrentUser({
           id: session.user.id,
           name: session.user.user_metadata?.full_name || 'Usuária',
           email: session.user.email || '',
-          onboardingComplete: true, // mock
+          onboardingComplete: true,
         });
       } else {
         setCurrentUser(null);
+        setIsAdmin(false);
       }
     });
 
@@ -54,15 +60,25 @@ export function RootNavigator() {
     );
   }
 
+  // Define which stack to show
+  let content;
+  if (!currentUser) {
+    content = <Stack.Screen name="AuthStack" component={AuthStack} />;
+  } else if (isAdmin && !isImpersonating) {
+    content = <Stack.Screen name="AdminStack" component={AdminStack} />;
+  } else {
+    // Shows AppTabs for normal users AND admins who are impersonating
+    content = <Stack.Screen name="AppTabs" component={AppTabs} />;
+  }
+
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {currentUser ? (
-          <Stack.Screen name="AppTabs" component={AppTabs} />
-        ) : (
-          <Stack.Screen name="AuthStack" component={AuthStack} />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <>
+      <AdminPreviewBanner />
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {content}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </>
   );
 }
