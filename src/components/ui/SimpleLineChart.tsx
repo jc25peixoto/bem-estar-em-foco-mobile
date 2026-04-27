@@ -19,20 +19,21 @@ export function SimpleLineChart({
   const chartW = width - padding.left - padding.right;
   const chartH = height - padding.top - padding.bottom;
 
-  const values = data.map((d) => d.value);
-  const minVal = Math.min(...values);
-  const maxVal = Math.max(...values);
+  const values = data.map((d) => d.value).filter(v => !isNaN(v));
+  const minVal = values.length > 0 ? Math.min(...values) : 0;
+  const maxVal = values.length > 0 ? Math.max(...values) : 0;
   const range = maxVal - minVal || 1;
 
   const points = useMemo(() => {
+    if (data.length === 0) return [];
     return data.map((d, i) => {
-      const x = padding.left + (i / (data.length - 1)) * chartW;
+      const x = padding.left + (data.length > 1 ? (i / (data.length - 1)) * chartW : chartW / 2);
       const y = padding.top + (1 - (d.value - minVal) / range) * chartH;
       return { x, y, label: d.label, value: d.value };
     });
   }, [data, chartW, chartH, minVal, range]);
 
-  const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(' ');
+  const polylinePoints = points.length > 1 ? points.map((p) => `${p.x},${p.y}`).join(' ') : "";
 
   return (
     <View style={styles.container}>

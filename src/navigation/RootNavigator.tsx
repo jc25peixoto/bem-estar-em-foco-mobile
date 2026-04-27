@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthStack } from './AuthStack';
-import { AppTabs } from './AppTabs';
+import { AppStack } from './AppStack';
 import { AdminStack } from './AdminStack';
 import { useAuthStore } from '../stores/useAuthStore';
 import { supabase } from '../lib/supabase';
@@ -16,37 +16,60 @@ export function RootNavigator() {
   const { authReady, currentUser, isAdmin, isImpersonating, setSession, setAuthReady, setCurrentUser, setIsAdmin } = useAuthStore();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const fetchAndSetUser = async (session: any) => {
       setSession(session);
-      if (session?.user) {
-        // Mock checking for admin
-        const adminRole = session.user.email?.includes('admin') || false;
-        setIsAdmin(adminRole);
-        setCurrentUser({
-          id: session.user.id,
-          name: session.user.user_metadata?.full_name || 'Usuária',
-          email: session.user.email || '',
-          onboardingComplete: true,
-        });
+      if (!session?.user) {
+        setCurrentUser(null);
+        setIsAdmin(false);
+        setAuthReady(true);
+        return;
       }
-      setAuthReady(true);
+      
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('onboarding_complete, tipo_acesso, full_name, type_profiles(nome)')
+          .eq('id', session.user.id)
+          .maybeSingle();
+          
+        if (!error && profile) {
+          const userRole = Array.isArray(profile.type_profiles) ? profile.type_profiles[0]?.nome : profile.type_profiles?.nome;
+          const isAdminRole = profile.tipo_acesso === 2 || userRole === 'admin' || userRole === 'Admin';
+          
+          setIsAdmin(isAdminRole);
+          setCurrentUser({
+            id: session.user.id,
+            name: profile.full_name || session.user.user_metadata?.full_name || 'Usuária',
+            email: session.user.email || '',
+            onboardingComplete: profile.onboarding_complete || false,
+            tipoAcesso: profile.tipo_acesso || 1,
+            weeklyRecords: [] // Mock to satisfy UserData
+          });
+        } else {
+          // Fallback
+          const adminRole = session.user.email?.includes('admin') || false;
+          setIsAdmin(adminRole);
+          setCurrentUser({
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || 'Usuária',
+            email: session.user.email || '',
+            onboardingComplete: false,
+            weeklyRecords: []
+          });
+        }
+      } catch (e) {
+        console.log('Error fetching profile:', e);
+      } finally {
+        setAuthReady(true);
+      }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      fetchAndSetUser(session);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        const adminRole = session.user.email?.includes('admin') || false;
-        setIsAdmin(adminRole);
-        setCurrentUser({
-          id: session.user.id,
-          name: session.user.user_metadata?.full_name || 'Usuária',
-          email: session.user.email || '',
-          onboardingComplete: true,
-        });
-      } else {
-        setCurrentUser(null);
-        setIsAdmin(false);
-      }
+      fetchAndSetUser(session);
     });
 
     return () => subscription.unsubscribe();
@@ -67,8 +90,8 @@ export function RootNavigator() {
   } else if (isAdmin && !isImpersonating) {
     content = <Stack.Screen name="AdminStack" component={AdminStack} />;
   } else {
-    // Shows AppTabs for normal users AND admins who are impersonating
-    content = <Stack.Screen name="AppTabs" component={AppTabs} />;
+    // Shows AppStack for normal users AND admins who are impersonating
+    content = <Stack.Screen name="AppStack" component={AppStack} />;
   }
 
   return (

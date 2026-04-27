@@ -91,18 +91,6 @@ export function LoginScreen() {
             />
           </View>
 
-          {/* Rodapé */}
-          <View style={styles.footer}>
-            <Typography variant="body" color="mutedForeground">
-              Não tem uma conta?{' '}
-            </Typography>
-            <Button
-              variant="ghost"
-              title="Criar conta"
-              onPress={() => navigation.navigate('Signup')}
-              style={styles.signupBtn}
-            />
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -146,14 +134,5 @@ const styles = StyleSheet.create({
   forgotBtn: {
     marginTop: tokens.spacing.xs,
     alignSelf: 'center',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  signupBtn: {
-    paddingHorizontal: 0,
-    height: 'auto' as any,
   },
 });

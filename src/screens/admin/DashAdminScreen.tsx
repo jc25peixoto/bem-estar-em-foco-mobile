@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useCallback, useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LegendList } from '@legendapp/list';
 import { Typography } from '../../components/ui/Typography';
@@ -9,6 +9,7 @@ import { FilterModal } from '../../components/admin/FilterModal';
 import { Button } from '../../components/ui/Button';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { supabase } from '../../lib/supabase';
 
 type AlunaItem = {
   id: string;
@@ -17,18 +18,38 @@ type AlunaItem = {
   status: 'ativo' | 'inativo';
 };
 
-const mockAlunas: AlunaItem[] = Array.from({ length: 500 }).map((_, i) => ({
-  id: `aluna-${i}`,
-  name: `Aluna ${i + 1}`,
-  email: `aluna${i + 1}@email.com`,
-  status: Math.random() > 0.2 ? 'ativo' : 'inativo',
-}));
-
 export function DashAdminScreen() {
-  const [data] = useState(mockAlunas);
+  const [data, setData] = useState<AlunaItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filterVisible, setFilterVisible] = useState(false);
+  
   const navigation = useNavigation<any>();
   const { startImpersonation } = useAuthStore();
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    // Busca perfis que são alunas (tipo_acesso = 1 ou nulo)
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, tipo_acesso')
+      .neq('tipo_acesso', 2)
+      .order('full_name', { ascending: true });
+
+    if (!error && profiles) {
+      const mapped = profiles.map(p => ({
+        id: p.id,
+        name: p.full_name || 'Sem Nome',
+        email: p.email || '',
+        status: 'ativo' as const // simplificação por enquanto
+      }));
+      setData(mapped);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const handleApplyFilters = (filters: Record<string, string>) => {
     console.log('Aplicando filtros:', filters);
@@ -72,13 +93,19 @@ export function DashAdminScreen() {
         </Typography>
       </View>
 
-      <LegendList
-        data={data}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        estimatedItemSize={120}
-        contentContainerStyle={styles.listContent}
-      />
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={tokens.colors.primary} />
+        </View>
+      ) : (
+        <LegendList
+          data={data}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          estimatedItemSize={120}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
 
       <FilterModal
         visible={filterVisible}
@@ -135,4 +162,9 @@ const styles = StyleSheet.create({
   impersonateBtn: {
     marginTop: tokens.spacing.md,
   },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });
