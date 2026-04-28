@@ -7,6 +7,7 @@ interface LineChartProps {
   color?: string;
   width?: number;
   height?: number;
+  unit?: string;
 }
 
 export function SimpleLineChart({
@@ -14,8 +15,9 @@ export function SimpleLineChart({
   color = '#d63f52',
   width = 300,
   height = 160,
+  unit = '',
 }: LineChartProps) {
-  const padding = { top: 16, bottom: 32, left: 8, right: 8 };
+  const padding = { top: 28, bottom: 32, left: 24, right: 24 };
   const chartW = width - padding.left - padding.right;
   const chartH = height - padding.top - padding.bottom;
 
@@ -64,24 +66,52 @@ export function SimpleLineChart({
           strokeLinejoin="round"
         />
 
-        {/* Dots */}
-        {points.map((p, i) => (
-          <Circle key={i} cx={p.x} cy={p.y} r={5} fill={color} />
-        ))}
+        {/* Dots + Value Labels */}
+        {points.map((p, i) => {
+          const isFirst = i === 0;
+          const isLast = i === points.length - 1;
+          let textAnchor: "middle" | "start" | "end" = "middle";
+          if (isFirst && points.length > 1) textAnchor = "start";
+          if (isLast && points.length > 1) textAnchor = "end";
+
+          return (
+            <React.Fragment key={i}>
+              <Circle cx={p.x} cy={p.y} r={5} fill={color} />
+              <SvgText
+                x={p.x}
+                y={p.y - 10}
+                fontSize="10"
+                fontWeight="600"
+                fill={color}
+                textAnchor={textAnchor}
+              >
+                {Number.isInteger(p.value) ? p.value : p.value.toFixed(1)}{unit}
+              </SvgText>
+            </React.Fragment>
+          );
+        })}
 
         {/* X Labels */}
-        {points.map((p, i) => (
-          <SvgText
-            key={i}
-            x={p.x}
-            y={height - 4}
-            fontSize="10"
-            fill="#888"
-            textAnchor="middle"
-          >
-            {p.label}
-          </SvgText>
-        ))}
+        {points.map((p, i) => {
+          const isFirst = i === 0;
+          const isLast = i === points.length - 1;
+          let textAnchor: "middle" | "start" | "end" = "middle";
+          if (isFirst && points.length > 1) textAnchor = "start";
+          if (isLast && points.length > 1) textAnchor = "end";
+
+          return (
+            <SvgText
+              key={`label-${i}`}
+              x={p.x}
+              y={height - 4}
+              fontSize="10"
+              fill="#888"
+              textAnchor={textAnchor}
+            >
+              {p.label}
+            </SvgText>
+          );
+        })}
       </Svg>
     </View>
   );

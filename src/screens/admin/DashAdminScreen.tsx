@@ -81,12 +81,19 @@ export function DashAdminScreen() {
     );
   }, [navigation, startImpersonation]);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <Typography variant="h2">Painel Admin</Typography>
-          <Button variant="secondary" size="sm" title="Filtros" onPress={() => setFilterVisible(true)} />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Button variant="secondary" size="sm" title="Filtros" onPress={() => setFilterVisible(true)} />
+            <Button variant="outline" size="sm" title="Sair" onPress={handleLogout} />
+          </View>
         </View>
         <Typography variant="body" color="mutedForeground">
           Total de {data.length} alunas cadastradas.

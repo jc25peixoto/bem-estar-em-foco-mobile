@@ -50,56 +50,39 @@ export function RankingScreen() {
       if (!currentUser?.id) return;
       setLoading(true);
 
-      // 1. Descobrir a turma do usuário logado
-      const { data: myProfile } = await supabase.from('profiles').select('turma_id').eq('id', currentUser.id).single();
-      const turmaId = myProfile?.turma_id;
-
-      if (!turmaId) {
-        setLoading(false);
-        return;
-      }
-
-      // 2. Buscar alunas da mesma turma
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name, ranking_visible')
-        .eq('turma_id', turmaId)
-        .neq('tipo_acesso', 2);
-
-      if (!profiles || profiles.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      const userIds = profiles.map(p => p.id);
-
-      // 3. Buscar dados de peso (onboarding e weekly)
-      const [initRes, weeksRes] = await Promise.all([
-        supabase.from('onboarding_initial').select('user_id, measurements').in('user_id', userIds),
-        supabase.from('weekly_records').select('user_id, measurements, week').in('user_id', userIds).order('week', { ascending: true })
-      ]);
-
-      const initials = initRes.data || [];
-      const weeks = weeksRes.data || [];
-
-      // 4. Calcular %
-      const ranking: RankItem[] = [];
-
-      for (const profile of profiles) {
-        const myInitial = initials.find(i => i.user_id === profile.id);
-        const myWeeks = weeks.filter(w => w.user_id === profile.id);
-
-        const initialWeight = myInitial?.measurements?.peso || 0;
+      try {
+        // Usar a mesma RPC SECURITY DEFINER do projeto web
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_gamification_users');
         
-        if (initialWeight > 0 && myWeeks.length > 0) {
-          const lastWeekWeight = myWeeks[myWeeks.length - 1].measurements?.peso || initialWeight;
-          const lostKg = initialWeight - lastWeekWeight;
-          const percent = (lostKg / initialWeight) * 100;
+        if (rpcError || !rpcData) {
+          setLoading(false);
+          return;
+        }
 
-          let displayName = profile.full_name || 'Aluna';
-          
-          // Lógica de Opt-out do Ranking (se não for a própria pessoa)
-          if (!profile.ranking_visible && profile.id !== currentUser.id) {
+        // Descobrir turma_id da aluna logada
+        const myEntry = rpcData.find((r: any) => r.id === currentUser.id);
+        const myTurmaId = myEntry?.turma_id;
+
+        if (!myTurmaId) {
+          setLoading(false);
+          return;
+        }
+
+        // Filtrar alunas da mesma turma (excluindo admins)
+        const sameTurma = rpcData.filter((r: any) => r.turma_id === myTurmaId && !r.is_admin);
+
+        // Calcular ranking
+        const ranking: RankItem[] = sameTurma.map((r: any) => {
+          const initW = Number(r.initial_weight) || 0;
+          const lastW = Number(r.latest_weight) || initW;
+          let percent = 0;
+          if (initW > 0 && lastW > 0) {
+            percent = ((initW - lastW) / initW) * 100;
+          }
+
+          // Opt-out de nome (mesma lógica do web buildLeaderboard)
+          let displayName = r.name || 'Aluna';
+          if (!r.ranking_visible && r.id !== currentUser.id) {
             const parts = displayName.trim().split(" ");
             if (parts.length === 1) {
               displayName = parts[0].substring(0, 2).toUpperCase() + ".";
@@ -108,21 +91,31 @@ export function RankingScreen() {
             }
           }
 
-          ranking.push({
-            id: profile.id,
+          return {
+            id: r.id,
             name: displayName,
             weightLossPercent: percent,
             position: 0,
-            isCurrentUser: profile.id === currentUser.id,
-          });
+            isCurrentUser: r.id === currentUser.id,
+          };
+        });
+
+        // Ordenar por % de perda (maior primeiro)
+        ranking.sort((a, b) => b.weightLossPercent - a.weightLossPercent);
+        ranking.forEach((r, idx) => r.position = idx + 1);
+
+        // Limitar a 20 e incluir usuário logado se estiver fora dos 20
+        let finalRanking = ranking.slice(0, 20);
+        const myRankIndex = ranking.findIndex(r => r.isCurrentUser);
+        if (myRankIndex >= 20) {
+          finalRanking.push(ranking[myRankIndex]);
         }
+
+        setData(finalRanking);
+      } catch (e) {
+        console.log('Error fetching ranking', e);
       }
-
-      // 5. Ordenar
-      ranking.sort((a, b) => b.weightLossPercent - a.weightLossPercent);
-      ranking.forEach((r, idx) => r.position = idx + 1);
-
-      setData(ranking);
+      
       setLoading(false);
     }
 

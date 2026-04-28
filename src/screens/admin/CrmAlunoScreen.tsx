@@ -65,12 +65,20 @@ export function CrmAlunoScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <Button 
-          variant="ghost" 
-          title="← Voltar" 
-          onPress={() => navigation.goBack()} 
-          style={styles.backButton}
-        />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Button 
+            variant="ghost" 
+            title="← Voltar" 
+            onPress={() => navigation.goBack()} 
+            style={styles.backButton}
+          />
+          <Button 
+            variant="outline" 
+            size="sm" 
+            title="Sair" 
+            onPress={async () => await supabase.auth.signOut()} 
+          />
+        </View>
         <Typography variant="h2">{alunaName}</Typography>
         <Typography variant="body" color="mutedForeground">
           Email: {profile.email}

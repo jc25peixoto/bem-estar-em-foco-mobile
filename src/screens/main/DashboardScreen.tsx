@@ -118,34 +118,30 @@ export function DashboardScreen() {
         }
         setBadges(earnedBadges);
 
-        // Fetch rank
+        // Fetch rank usando RPC (mesma lógica do projeto web)
         try {
-          const { data: myProfile } = await supabase.from('profiles').select('turma_id').eq('id', user.id).single();
-          if (myProfile?.turma_id) {
-            const { data: profiles } = await supabase.from('profiles').select('id').eq('turma_id', myProfile.turma_id).neq('tipo_acesso', 2);
-            if (profiles && profiles.length > 0) {
-              const userIds = profiles.map(p => p.id);
-              const [allInitRes, allWeeksRes] = await Promise.all([
-                supabase.from('onboarding_initial').select('user_id, measurements').in('user_id', userIds),
-                supabase.from('weekly_records').select('user_id, measurements').in('user_id', userIds).order('week', { ascending: true })
-              ]);
-              
-              const initials = allInitRes.data || [];
-              const allWeeks = allWeeksRes.data || [];
-              const ranking = [];
-              
-              for (const profile of profiles) {
-                const myInitial = initials.find(i => i.user_id === profile.id);
-                const mWeeks = allWeeks.filter(w => w.user_id === profile.id);
-                const initW = myInitial?.measurements?.peso || 0;
-                if (initW > 0 && mWeeks.length > 0) {
-                  const lastW = mWeeks[mWeeks.length - 1].measurements?.peso || initW;
-                  const pLoss = ((initW - lastW) / initW) * 100;
-                  ranking.push({ id: profile.id, percent: pLoss });
+          const { data: rpcData, error: rpcError } = await supabase.rpc('get_gamification_users');
+          if (!rpcError && rpcData) {
+            // Descobrir turma_id da aluna logada
+            const myEntry = rpcData.find((r: any) => r.id === user.id);
+            const myTurmaId = myEntry?.turma_id;
+
+            if (myTurmaId) {
+              // Filtrar alunas da mesma turma (excluindo admins)
+              const sameTurma = rpcData.filter((r: any) => r.turma_id === myTurmaId && !r.is_admin);
+
+              const ranking = sameTurma.map((r: any) => {
+                const initW = Number(r.initial_weight) || 0;
+                const lastW = Number(r.latest_weight) || initW;
+                let pLoss = 0;
+                if (initW > 0 && lastW > 0) {
+                  pLoss = ((initW - lastW) / initW) * 100;
                 }
-              }
-              ranking.sort((a, b) => b.percent - a.percent);
-              const myRankIndex = ranking.findIndex(r => r.id === user.id);
+                return { id: r.id, percent: pLoss };
+              });
+
+              ranking.sort((a: any, b: any) => b.percent - a.percent);
+              const myRankIndex = ranking.findIndex((r: any) => r.id === user.id);
               if (myRankIndex !== -1) {
                 setRankInfo({ position: myRankIndex + 1, percent: ranking[myRankIndex].percent });
               }
