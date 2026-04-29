@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Typography } from '../../components/ui/Typography';
 import { Card } from '../../components/ui/Card';
 import { tokens } from '../../theme/tokens';
-import { useEffectiveUser } from '../../stores/useAuthStore';
+import { useEffectiveUser, useAuthStore } from '../../stores/useAuthStore';
 import { SimpleLineChart } from '../../components/ui/SimpleLineChart';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/ui/Button';
@@ -14,6 +14,7 @@ const { width } = Dimensions.get('window');
 
 export function DashboardScreen() {
   const user = useEffectiveUser();
+  const updateCurrentUser = useAuthStore(s => s.updateCurrentUser);
   const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<{value: number, label: string}[]>([]);
@@ -149,6 +150,24 @@ export function DashboardScreen() {
           }
         } catch (e) {
           console.log('Error fetching rank', e);
+        }
+
+        // Sincronizar permissões do perfil (ex: meal_logging_enabled)
+        try {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('meal_logging_enabled, ranking_visible')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (profileData) {
+            updateCurrentUser({
+              mealLoggingEnabled: profileData.meal_logging_enabled ?? false,
+              rankingVisible: profileData.ranking_visible ?? true,
+            });
+          }
+        } catch (e) {
+          console.log('Error syncing profile permissions', e);
         }
 
         setLoading(false);
@@ -293,12 +312,14 @@ export function DashboardScreen() {
                 onPress={() => navigation.navigate('RegistroSemanal')}
                 style={styles.mainActionBtn}
               />
-              <Button 
-                title="Meu Jejum ⏱️" 
-                variant="outline"
-                onPress={() => navigation.navigate('JejumSemanal')}
-                style={styles.mainActionBtn}
-              />
+              {user?.mealLoggingEnabled && (
+                <Button 
+                  title="Minhas Refeições 🍽️" 
+                  variant="outline"
+                  onPress={() => navigation.navigate('Refeicoes')}
+                  style={styles.mainActionBtn}
+                />
+              )}
             </View>
           </>
         )}

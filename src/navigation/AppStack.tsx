@@ -2,7 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AppTabs } from './AppTabs';
 import { RegistroSemanalScreen } from '../screens/main/RegistroSemanalScreen';
-import { JejumSemanalScreen } from '../screens/main/JejumSemanalScreen';
+import { MealsScreen } from '../screens/main/MealsScreen';
 import { OnboardingScreen } from '../screens/main/OnboardingScreen';
 import { useEffectiveUser } from '../stores/useAuthStore';
 
@@ -21,7 +21,7 @@ export function AppStack() {
         <>
           <Stack.Screen name="MainTabs" component={AppTabs} />
           <Stack.Screen name="RegistroSemanal" component={RegistroSemanalScreen} />
-          <Stack.Screen name="JejumSemanal" component={JejumSemanalScreen} />
+          <Stack.Screen name="Refeicoes" component={MealsScreen} />
         </>
       )}
     </Stack.Navigator>

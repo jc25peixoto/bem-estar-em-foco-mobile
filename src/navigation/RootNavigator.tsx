@@ -28,7 +28,7 @@ export function RootNavigator() {
       try {
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('onboarding_complete, tipo_acesso, full_name, type_profiles(nome)')
+          .select('onboarding_complete, tipo_acesso, full_name, type_profiles(nome), telefone, data_nascimento, cidade, estado, profissao, objetivos, ranking_visible, meal_logging_enabled')
           .eq('id', session.user.id)
           .maybeSingle();
           
@@ -43,6 +43,14 @@ export function RootNavigator() {
             email: session.user.email || '',
             onboardingComplete: profile.onboarding_complete || false,
             tipoAcesso: profile.tipo_acesso || 1,
+            phone: profile.telefone || '',
+            birthDate: profile.data_nascimento || '',
+            city: profile.cidade || '',
+            state: profile.estado || '',
+            occupation: profile.profissao || '',
+            goals: profile.objetivos || '',
+            rankingVisible: profile.ranking_visible ?? true,
+            mealLoggingEnabled: profile.meal_logging_enabled || false,
             weeklyRecords: [] // Mock to satisfy UserData
           });
         } else {

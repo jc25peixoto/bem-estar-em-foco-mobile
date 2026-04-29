@@ -18,6 +18,7 @@ interface AuthState {
   setAuthReady: (ready: boolean) => void;
   startImpersonation: (user: UserData) => void;
   stopImpersonation: () => void;
+  updateCurrentUser: (data: Partial<UserData>) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -48,6 +49,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     isImpersonating: false,
     effectiveUser: state.currentUser
   })),
+  updateCurrentUser: (data) => set((state) => {
+    if (!state.currentUser) return state;
+    const updatedUser = { ...state.currentUser, ...data };
+    return {
+      currentUser: updatedUser,
+      effectiveUser: state.isImpersonating ? state.viewingAs : updatedUser
+    };
+  }),
 }));
 
 export const useEffectiveUser = () => {
