@@ -61,7 +61,7 @@ export function FastingLevelSelector({ selected, onSelect }: Props) {
 
 const styles = StyleSheet.create({
   mainCard: {
-    padding: tokens.spacing.xl,
+    padding: tokens.spacing.md,
     borderRadius: tokens.radius.xl,
     backgroundColor: '#FFFFFF',
     marginBottom: tokens.spacing.xl,
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     color: '#333333',
   },
   subtitle: {
-    marginBottom: tokens.spacing.xl,
+    marginBottom: tokens.spacing.lg,
     fontSize: 14,
     lineHeight: 20,
     color: '#888888',
@@ -86,20 +86,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: tokens.spacing.md,
+    gap: tokens.spacing.sm,
   },
   cardContainer: {
-    width: '47%', // slightly less than 50% to account for gap
-    marginBottom: tokens.spacing.md,
+    width: '48.5%', // optimized for 2 columns with small gap
+    marginBottom: tokens.spacing.sm,
   },
   optionCard: {
-    padding: tokens.spacing.lg,
+    padding: tokens.spacing.md,
     position: 'relative',
     borderWidth: 1.5,
     borderColor: tokens.colors.border,
     borderRadius: tokens.radius.lg,
     backgroundColor: '#FFFFFF',
-    minHeight: 180,
+    minHeight: 150,
   },
   optionCardSelected: {
     borderColor: tokens.colors.primary,

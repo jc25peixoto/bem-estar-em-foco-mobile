@@ -241,15 +241,30 @@ export function JejumSemanalScreen() {
 
     // Streak
     let streak = 0;
-    const sortedDates = [...weekDates].sort((a, b) => b.getTime() - a.getTime());
-    for (const d of sortedDates) {
+    const todayStr = toDateStr(new Date());
+    // Filtra apenas dias que já passaram ou hoje, e ordena do mais recente para o mais antigo
+    const relevantDates = weekDates
+      .filter((d) => toDateStr(d) <= todayStr)
+      .sort((a, b) => b.getTime() - a.getTime());
+
+    for (const d of relevantDates) {
       const dow = d.getDay();
       const prot = level.weekProtocols[dow];
+      
+      // Dias livres não somam à sequência mas também não a quebram
       if (prot.isFree) continue;
+
       const rec = records.find((r) => r.record_date === toDateStr(d));
+      
       if (rec?.status === 'completed') {
         streak++;
       } else {
+        // Se o dia for hoje e ainda estiver pendente, não quebramos a sequência ainda,
+        // permitimos ver a sequência acumulada até ontem.
+        if (toDateStr(d) === todayStr && (!rec || rec.status === 'pending')) {
+          continue;
+        }
+        // Para qualquer outro dia (passado) que não esteja completo, quebra a sequência.
         break;
       }
     }
@@ -311,16 +326,16 @@ export function JejumSemanalScreen() {
 
         {level && !showLevelSelector && (
           <View style={styles.levelHeader}>
-            <View style={styles.levelHeaderLeft}>
-              <Typography style={styles.levelEmoji}>{level.emoji}</Typography>
-              <View>
+            <Typography style={styles.levelEmoji}>{level.emoji}</Typography>
+            <View style={{ flex: 1 }}>
+              <View style={styles.levelTitleRow}>
                 <Typography variant="h4">Nível {level.name}</Typography>
-                <Typography variant="caption" color="mutedForeground">{level.description}</Typography>
+                <TouchableOpacity onPress={() => setShowLevelSelector(true)}>
+                  <Typography variant="caption" color="primary" weight="semibold">Alterar</Typography>
+                </TouchableOpacity>
               </View>
+              <Typography variant="caption" color="mutedForeground">{level.description}</Typography>
             </View>
-            <TouchableOpacity onPress={() => setShowLevelSelector(true)}>
-              <Typography variant="caption" color="primary" weight="semibold">Alterar</Typography>
-            </TouchableOpacity>
           </View>
         )}
 
@@ -496,15 +511,14 @@ const styles = StyleSheet.create({
   },
   levelHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: tokens.spacing.md,
     marginBottom: tokens.spacing.xl,
   },
-  levelHeaderLeft: {
+  levelTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: tokens.spacing.sm,
-    flex: 1,
+    justifyContent: 'space-between',
   },
   levelEmoji: {
     fontSize: 32,
